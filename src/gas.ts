@@ -1,4 +1,4 @@
-import { runWeeklyTracker as runTrackerCore } from "./runner";
+import { runWeeklyTracker as runTrackerCore, type RunResult } from "./runner";
 import { AppsScriptSheetGateway } from "./sheets";
 
 function fetchText(url: string): Promise<string> {
@@ -40,47 +40,58 @@ export function onOpen(): void {
 }
 
 export async function runWeeklyTracker(): Promise<void> {
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  const gateway = new AppsScriptSheetGateway(spreadsheet);
-  const result = await runTrackerCore({
-    gateway,
-    week: currentIsoWeek(),
-    fetchText,
-    now,
-    dryRun: false,
-  });
+  const result = await executeWeeklyTracker(false);
   SpreadsheetApp.getUi().alert(
     `Weekly tracker finished for ${result.week}. Signals: ${result.collectedSignals}; sources: ${result.sourceRuns}.`,
   );
 }
 
 export async function runWeeklyTrackerDryRun(): Promise<void> {
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  const gateway = new AppsScriptSheetGateway(spreadsheet);
-  const result = await runTrackerCore({
-    gateway,
-    week: currentIsoWeek(),
-    fetchText,
-    now,
-    dryRun: true,
-  });
+  const result = await executeWeeklyTracker(true);
   SpreadsheetApp.getUi().alert(
     `Dry run finished for ${result.week}. Signals: ${result.collectedSignals}; sources: ${result.sourceRuns}. No rows were written.`,
   );
 }
 
+export async function runWeeklyTrackerScheduled(): Promise<void> {
+  try {
+    const result = await executeWeeklyTracker(false);
+    console.log(
+      `Scheduled weekly tracker finished for ${result.week}. Signals: ${result.collectedSignals}; sources: ${result.sourceRuns}.`,
+    );
+  } catch (error) {
+    console.error("Scheduled weekly tracker failed.", error);
+    throw error;
+  }
+}
+
+async function executeWeeklyTracker(dryRun: boolean): Promise<RunResult> {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const gateway = new AppsScriptSheetGateway(spreadsheet);
+  return runTrackerCore({
+    gateway,
+    week: currentIsoWeek(),
+    fetchText,
+    now,
+    dryRun,
+  });
+}
+
 export function installWeeklyTrigger(): void {
   const existing = ScriptApp.getProjectTriggers().filter(
-    (trigger) => trigger.getHandlerFunction() === "runWeeklyTracker",
+    (trigger) =>
+      trigger.getHandlerFunction() === "runWeeklyTracker" ||
+      trigger.getHandlerFunction() === "runWeeklyTrackerScheduled",
   );
   existing.forEach((trigger) => ScriptApp.deleteTrigger(trigger));
-  ScriptApp.newTrigger("runWeeklyTracker").timeBased().onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(9).create();
-  SpreadsheetApp.getUi().alert("Installed Monday 09:00 weekly trigger for runWeeklyTracker.");
+  ScriptApp.newTrigger("runWeeklyTrackerScheduled").timeBased().onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(9).create();
+  SpreadsheetApp.getUi().alert("Installed Monday 09:00 weekly trigger for runWeeklyTrackerScheduled.");
 }
 
 Object.assign(globalThis, {
   onOpen,
   runWeeklyTracker,
   runWeeklyTrackerDryRun,
+  runWeeklyTrackerScheduled,
   installWeeklyTrigger,
 });
