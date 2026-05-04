@@ -154,7 +154,7 @@ export const REQUIRED_SHEETS: readonly SheetSchema[] = [
 
 export type TableRow = Record<string, string | number | boolean>;
 
-export type GrowthSignal = {
+export type GrowthSignal = TableRow & {
   week: string;
   app: string;
   market: Market;
@@ -171,7 +171,7 @@ export type GrowthSignal = {
   notes: string;
 };
 
-export type SourceRun = {
+export type SourceRun = TableRow & {
   run_id: string;
   week: string;
   source_name: string;

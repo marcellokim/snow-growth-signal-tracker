@@ -6,8 +6,9 @@ import {
   type ConnectorResult,
   type FetchText,
   type Now,
+  type PublicUrlCollectInput,
 } from "./connectors";
-import { REQUIRED_SHEETS, type Confidence, type GrowthSignal, type SheetName, type TableRow } from "./domain";
+import { schemaFor, type Channel, type Confidence, type GrowthSignal, type Market, type SheetName, type TableRow } from "./domain";
 import { compareStoreKeywordRows, repetitionScore, scoreSignal } from "./scoring";
 import { ensureWorkbookSchema, objectsToRows, rowsToObjects, type SheetGateway } from "./sheets";
 import { buildWeeklySummaryRows } from "./summary";
@@ -29,6 +30,26 @@ export type RunResult = {
   sourceRuns: number;
   dryRun: boolean;
 };
+
+type PublicSourceDefinition = {
+  channel: Extract<Channel, "TikTok" | "Instagram">;
+  sourceName: string;
+  sourceUrl: (appName: string) => string;
+};
+
+const PUBLIC_SOURCE_DEFINITIONS = [
+  {
+    channel: "TikTok",
+    sourceName: "TikTok public search",
+    sourceUrl: (appName: string) => `https://www.tiktok.com/search?q=${encodeURIComponent(`${appName} AI photo`)}`,
+  },
+  {
+    channel: "Instagram",
+    sourceName: "Instagram public search",
+    sourceUrl: (appName: string) =>
+      `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(appName)}`,
+  },
+] satisfies readonly PublicSourceDefinition[];
 
 export async function runWeeklyTracker(options: RunOptions): Promise<RunResult> {
   ensureWorkbookSchema(options.gateway);
@@ -56,10 +77,10 @@ export async function runWeeklyTracker(options: RunOptions): Promise<RunResult> 
 
   if (!options.dryRun) {
     replaceWeekRows(options.gateway, "Weekly Summary", options.week, summaryRows);
-    replaceWeekRows(options.gateway, "Growth Signals", options.week, scoredSignals as unknown as TableRow[]);
+    replaceWeekRows(options.gateway, "Growth Signals", options.week, scoredSignals);
     replaceAppMatrixRows(options.gateway, appMatrix);
     replaceWeekRows(options.gateway, "Store Keywords", options.week, comparedStoreRows);
-    replaceWeekRows(options.gateway, "Sources & Runs", options.week, sourceRuns as unknown as TableRow[]);
+    replaceWeekRows(options.gateway, "Sources & Runs", options.week, sourceRuns);
   }
 
   return {
@@ -85,30 +106,26 @@ function buildCollectionPlans(
   for (const app of DEFAULT_TRACKED_APPS) {
     for (const market of DEFAULT_MARKETS) {
       const appStoreInput = { week, app: app.name, market, term: app.searchTerms[market] };
-      const tiktokInput = {
-        week,
-        app: app.name,
-        market,
-        channel: "TikTok" as const,
-        sourceName: "TikTok public search",
-        sourceUrl: `https://www.tiktok.com/search?q=${encodeURIComponent(`${app.name} AI photo`)}`,
-      };
-      const instagramInput = {
-        week,
-        app: app.name,
-        market,
-        channel: "Instagram" as const,
-        sourceName: "Instagram public search",
-        sourceUrl: `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(app.name)}`,
-      };
 
       plans.push({ url: appStoreSearchUrl(appStoreInput), collect: () => appStore.collect(appStoreInput) });
-      plans.push({ url: tiktokInput.sourceUrl, collect: () => publicUrl.collect(tiktokInput) });
-      plans.push({ url: instagramInput.sourceUrl, collect: () => publicUrl.collect(instagramInput) });
+      for (const input of publicSourceInputs(week, app.name, market)) {
+        plans.push({ url: input.sourceUrl, collect: () => publicUrl.collect(input) });
+      }
     }
   }
 
   return plans;
+}
+
+function publicSourceInputs(week: string, appName: string, market: Market): PublicUrlCollectInput[] {
+  return PUBLIC_SOURCE_DEFINITIONS.map((source) => ({
+    week,
+    app: appName,
+    market,
+    channel: source.channel,
+    sourceName: source.sourceName,
+    sourceUrl: source.sourceUrl(appName),
+  }));
 }
 
 function uniqueUrls(urls: readonly string[]): string[] {
@@ -116,10 +133,7 @@ function uniqueUrls(urls: readonly string[]): string[] {
 }
 
 function readDataRows<T extends TableRow>(gateway: SheetGateway, sheetName: SheetName): T[] {
-  const schema = REQUIRED_SHEETS.find((sheet) => sheet.name === sheetName);
-  if (!schema) {
-    throw new Error(`Missing schema: ${sheetName}`);
-  }
+  const schema = schemaFor(sheetName);
   const rows = gateway.getRows(sheetName);
   return rowsToObjects<T>([...schema.columns], rows.slice(1));
 }
@@ -136,10 +150,7 @@ function replaceAppMatrixRows(gateway: SheetGateway, rows: TableRow[]): void {
 }
 
 function replaceDataRows(gateway: SheetGateway, sheetName: SheetName, rows: TableRow[]): void {
-  const schema = REQUIRED_SHEETS.find((sheet) => sheet.name === sheetName);
-  if (!schema) {
-    throw new Error(`Missing schema: ${sheetName}`);
-  }
+  const schema = schemaFor(sheetName);
   gateway.replaceRows(sheetName, [[...schema.columns], ...objectsToRows(schema.columns, rows)]);
 }
 

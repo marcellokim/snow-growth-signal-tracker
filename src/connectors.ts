@@ -114,7 +114,7 @@ export class AppStoreSearchConnector {
     nextAction: string,
   ): SourceRun {
     return {
-      run_id: `${week}-${sourceName}-${app}-${market}`.replace(/\s+/g, "-"),
+      run_id: sourceRunId(week, sourceName, app, market),
       week,
       source_name: sourceName,
       source_url: sourceUrl,
@@ -193,7 +193,7 @@ export class PublicUrlConnector {
 
   private sourceRun(input: PublicUrlCollectInput, status: SourceStatus, error: string, manual: boolean, nextAction: string): SourceRun {
     return {
-      run_id: `${input.week}-${input.sourceName}-${input.app}-${input.market}`.replace(/\s+/g, "-"),
+      run_id: sourceRunId(input.week, input.sourceName, input.app, input.market),
       week: input.week,
       source_name: input.sourceName,
       source_url: input.sourceUrl,
@@ -215,7 +215,7 @@ export class ManualQueueConnector {
     return {
       status: "manual_needed",
       sourceRun: {
-        run_id: `${input.week}-${input.sourceName}-${input.app}-${input.market}`.replace(/\s+/g, "-"),
+        run_id: sourceRunId(input.week, input.sourceName, input.app, input.market),
         week: input.week,
         source_name: input.sourceName,
         source_url: input.sourceUrl,
@@ -236,6 +236,10 @@ export class ManualQueueConnector {
 
 export function appStoreSearchUrl(input: AppStoreCollectInput): string {
   return `https://itunes.apple.com/search?entity=software&country=${encodeURIComponent(input.market)}&term=${encodeURIComponent(input.term)}`;
+}
+
+function sourceRunId(...parts: readonly string[]): string {
+  return parts.join("-").replace(/\s+/g, "-");
 }
 
 function extractAiKeywords(description: string): string {
