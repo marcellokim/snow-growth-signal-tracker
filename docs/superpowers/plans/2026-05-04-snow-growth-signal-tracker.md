@@ -87,7 +87,7 @@ Create `package.json`:
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "build": "node scripts/build-gas.mjs",
@@ -203,7 +203,7 @@ npm run typecheck
 npm run test
 ```
 
-Expected: typecheck succeeds. Vitest succeeds with no tests or reports no test files until Task 2 adds tests.
+Expected: typecheck succeeds. Vitest exits `0` with no tests because `--passWithNoTests` is enabled.
 
 - [ ] **Step 4: Commit scaffold**
 
