@@ -107,4 +107,43 @@ describe("sheet gateway", () => {
       "notes",
     ]);
   });
+
+  it("rejects required headers in the wrong order", () => {
+    const gateway = new InMemorySheetGateway();
+    ensureWorkbookSchema(gateway);
+    const growthSignalHeaders = [...REQUIRED_SHEETS.find((sheet) => sheet.name === "Growth Signals")!.columns];
+    gateway.replaceRows("Growth Signals", [[growthSignalHeaders[1], growthSignalHeaders[0], ...growthSignalHeaders.slice(2)]]);
+
+    expect(() => ensureWorkbookSchema(gateway)).toThrow(
+      'Sheet "Growth Signals" header must match required column order',
+    );
+  });
+
+  it("rejects ragged replacement rows before changing existing rows", () => {
+    const gateway = new InMemorySheetGateway();
+    const existingRows = [
+      ["week", "app"],
+      ["2026-W09", "SNOW"],
+    ];
+    gateway.replaceRows("Growth Signals", existingRows);
+
+    expect(() => gateway.replaceRows("Growth Signals", [["a"], ["b", "c"]])).toThrow(
+      "Rows for sheet \"Growth Signals\" must be rectangular",
+    );
+    expect(gateway.getRows("Growth Signals")).toEqual(existingRows);
+  });
+
+  it("rejects ragged appended rows before appending anything", () => {
+    const gateway = new InMemorySheetGateway();
+    const existingRows = [
+      ["week", "app"],
+      ["2026-W09", "SNOW"],
+    ];
+    gateway.replaceRows("Growth Signals", existingRows);
+
+    expect(() => gateway.appendRows("Growth Signals", [["a"], ["b", "c"]])).toThrow(
+      "Rows for sheet \"Growth Signals\" must be rectangular",
+    );
+    expect(gateway.getRows("Growth Signals")).toEqual(existingRows);
+  });
 });

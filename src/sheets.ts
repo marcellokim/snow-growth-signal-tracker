@@ -26,12 +26,13 @@ export class InMemorySheetGateway implements SheetGateway {
   }
 
   replaceRows(name: SheetName, rows: unknown[][]): void {
-    this.sheets.set(name, rows.map((row) => [...row]));
+    this.sheets.set(name, cloneRectangularRows(name, rows));
   }
 
   appendRows(name: SheetName, rows: unknown[][]): void {
+    const rowsToAppend = cloneRectangularRows(name, rows);
     const existing = this.getRows(name);
-    this.sheets.set(name, [...existing, ...rows.map((row) => [...row])]);
+    this.sheets.set(name, [...existing, ...rowsToAppend]);
   }
 }
 
@@ -56,20 +57,22 @@ export class AppsScriptSheetGateway implements SheetGateway {
   }
 
   replaceRows(name: SheetName, rows: unknown[][]): void {
+    const rowsToWrite = cloneRectangularRows(name, rows);
     const sheet = this.mustGetSheet(name);
     sheet.clearContents();
-    if (rows.length > 0) {
-      sheet.getRange(1, 1, rows.length, rows[0].length).setValues(rows);
+    if (rowsToWrite.length > 0) {
+      sheet.getRange(1, 1, rowsToWrite.length, rowsToWrite[0].length).setValues(rowsToWrite);
     }
   }
 
   appendRows(name: SheetName, rows: unknown[][]): void {
-    if (rows.length === 0) {
+    const rowsToAppend = cloneRectangularRows(name, rows);
+    if (rowsToAppend.length === 0) {
       return;
     }
     const sheet = this.mustGetSheet(name);
     const startRow = Math.max(sheet.getLastRow(), 0) + 1;
-    sheet.getRange(startRow, 1, rows.length, rows[0].length).setValues(rows);
+    sheet.getRange(startRow, 1, rowsToAppend.length, rowsToAppend[0].length).setValues(rowsToAppend);
   }
 
   private mustGetSheet(name: SheetName): GoogleAppsScript.Spreadsheet.Sheet {
@@ -92,9 +95,11 @@ export function ensureWorkbookSchema(gateway: SheetGateway): void {
       continue;
     }
     const header = rows[0].map(String);
-    const missing = schema.columns.filter((column) => !header.includes(column));
-    if (missing.length > 0) {
-      throw new Error(`Sheet "${schema.name}" is missing columns: ${missing.join(", ")}`);
+    const expectedHeader = [...schema.columns];
+    if (!headersMatchExpectedOrder(header, expectedHeader)) {
+      throw new Error(
+        `Sheet "${schema.name}" header must match required column order: ${expectedHeader.join(", ")}`,
+      );
     }
   }
 }
@@ -107,4 +112,20 @@ export function rowsToObjects<T extends TableRow>(headers: string[], rows: unkno
 
 export function objectsToRows(headers: readonly string[], rows: readonly TableRow[]): unknown[][] {
   return rows.map((row) => headers.map((header) => row[header] ?? ""));
+}
+
+function cloneRectangularRows(name: SheetName, rows: unknown[][]): unknown[][] {
+  if (rows.length === 0) {
+    return [];
+  }
+  const columnCount = rows[0].length;
+  const raggedRowIndex = rows.findIndex((row) => row.length !== columnCount);
+  if (raggedRowIndex !== -1) {
+    throw new Error(`Rows for sheet "${name}" must be rectangular`);
+  }
+  return rows.map((row) => [...row]);
+}
+
+function headersMatchExpectedOrder(header: string[], expectedHeader: string[]): boolean {
+  return expectedHeader.every((column, index) => header[index] === column);
 }
