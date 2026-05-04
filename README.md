@@ -1,36 +1,121 @@
 # SNOW Growth Signal Tracker
 
-Google Sheets and Apps Script tracker for weekly growth signals across SNOW-family apps and competitors.
+SNOW Growth Signal Tracker is a TypeScript and Google Apps Script project for monitoring weekly growth signals across SNOW-family camera apps and comparable photo-editing competitors in Google Sheets.
 
-Tracked apps include SNOW, SODA, Foodie, EPIK, B612, BeautyPlus, Meitu, and Remini. The tracker records App Store positioning, public social/search signals, source status, AI/growth-related changes, and a one-page weekly summary.
-
-## What It Builds
-
-- Google Sheets workbook schema for weekly tracking tabs.
-- Apps Script menu actions for dry run, weekly run, and trigger install.
-- Weekly runner that scores growth signals and preserves historical rows.
-- Evidence-gated summary rows for changes, observations, and manual checks.
-- Local TypeScript/Vitest verification before deployment.
-
-## Local Verification
+It tracks SNOW, SODA, Foodie, EPIK, B612, BeautyPlus, Meitu, and Remini across KR, US, and JP. The workbook captures App Store positioning, AI-related feature signals, public TikTok/Instagram search checks, source status, manual review needs, and a one-page weekly summary.
 
 ```bash
 npm install
 npm run verify
 ```
 
-`npm run verify` runs TypeScript checks, Vitest tests, and builds Apps Script artifacts into `build/`.
+`npm run verify` runs TypeScript checks, Vitest tests, and the Apps Script bundle build.
 
-## Deployment
+## What It Does
 
-See [docs/apps-script-setup.md](docs/apps-script-setup.md) for the clasp and Google Sheets setup flow.
+- Creates and validates the required Google Sheets workbook tabs.
+- Runs weekly collection plans for App Store Search and public TikTok/Instagram search pages.
+- Scores growth signals by change strength, growth relevance, confidence, and repetition.
+- Preserves historical rows while replacing only the current week's generated rows.
+- Writes a compact `Weekly Summary` plus supporting tables for signals, keywords, app matrix rows, and source runs.
+- Records blocked, partial, or low-confidence public sources as manual-check items instead of hiding them.
+- Provides Apps Script menu actions for dry runs, live weekly runs, and Monday trigger installation.
 
-Important deployment notes:
+## Tech Stack
 
-- `build/Code.js` and `build/appsscript.json` are generated artifacts.
-- `.clasp.json` is local workbook binding state and is intentionally ignored.
-- Live Google authorization, `clasp push`, Sheet menu rendering, and weekly trigger execution must be verified in the target Google account.
+- TypeScript
+- Google Apps Script V8
+- SpreadsheetApp, UrlFetchApp, and ScriptApp
+- clasp for deployment to a bound Apps Script project
+- esbuild for bundling
+- Vitest for local tests
+
+## Repository Layout
+
+```text
+src/domain.ts       Sheet names, schemas, row types, and week normalization
+src/config.ts       Tracked apps, markets, and scoring weights
+src/connectors.ts   App Store, public URL, and manual queue connectors
+src/scoring.ts      Keyword comparison and growth signal scoring
+src/summary.ts      Weekly summary row generation
+src/runner.ts       Weekly orchestration and sheet row replacement
+src/gas.ts          Apps Script menu, dry run, scheduled run, and trigger entrypoints
+src/sheets.ts       Sheet gateway adapters for Apps Script and tests
+tests/              Vitest coverage for schema, connectors, runner, scoring, summary, and GAS entrypoints
+scripts/build-gas.mjs
+docs/apps-script-setup.md
+```
+
+## Local Setup
+
+Prerequisites:
+
+- Node.js 20 or newer is recommended.
+- npm, using the committed `package-lock.json`.
+- A Google account with access to the target Google Sheet is required only for live Apps Script deployment.
+
+Install and verify:
+
+```bash
+npm install
+npm run verify
+```
+
+Useful commands:
+
+```bash
+npm run typecheck   # TypeScript only
+npm test            # Vitest only
+npm run build       # Generate build/Code.js and build/appsscript.json
+npm run verify      # Typecheck, test, and build
+```
+
+## Configuration And Credentials
+
+No `.env` file is required for local tests or builds.
+
+Live deployment uses Google authentication handled by `clasp`:
+
+- `.clasp.json` binds this repo to a specific Apps Script project and is intentionally ignored.
+- `npx clasp login` stores Google auth outside this repo.
+- The Apps Script OAuth scopes are declared in [appsscript.json](appsscript.json).
+- Do not commit Google credentials, local workbook bindings, copied cookies, or private social account access.
+
+## Google Sheets Deployment
+
+The recommended deployment target is a bound Google Apps Script project attached to a Google Sheets workbook.
+
+Start with the full setup guide:
+
+- [docs/apps-script-setup.md](docs/apps-script-setup.md)
+
+Short version:
+
+```bash
+npm run build
+npx clasp login
+npx clasp clone <SCRIPT_ID> --rootDir build
+npx clasp push
+```
+
+After pushing, reload the Google Sheet and use the `Growth Tracker` menu:
+
+- `Dry Run Weekly Tracker`
+- `Run Weekly Tracker`
+- `Install Weekly Trigger`
+
+Live Google authorization, menu rendering, `clasp push`, and trigger execution must be verified in the target Google account. Local verification does not prove those external account steps.
 
 ## Source Policy
 
-TikTok and Instagram checks are public, non-login checks only. Blocked or low-confidence sources become manual-check rows instead of failing the entire weekly run.
+TikTok and Instagram checks are public, non-login checks only. The tracker should not use personal login cookies, authenticated scraping sessions, or private-account access.
+
+Blocked, rate-limited, or low-confidence sources become source-status rows and manual-check items instead of causing the entire weekly run to fail.
+
+## Screenshots
+
+No screenshots are included yet. The primary UI is the target Google Sheets workbook after Apps Script deployment.
+
+## License
+
+No open-source license has been declared yet. Add one before encouraging reuse outside the project owner.
