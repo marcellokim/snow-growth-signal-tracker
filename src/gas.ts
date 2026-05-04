@@ -138,6 +138,13 @@ export function installWeeklyTrigger(): void {
 }
 
 Object.assign(globalThis, {
+  __snowGrowthSignalTracker: {
+    onOpen,
+    runWeeklyTracker,
+    runWeeklyTrackerDryRun,
+    runWeeklyTrackerScheduled,
+    installWeeklyTrigger,
+  },
   onOpen,
   runWeeklyTracker,
   runWeeklyTrackerDryRun,
