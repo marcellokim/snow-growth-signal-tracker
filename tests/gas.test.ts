@@ -85,6 +85,23 @@ describe("Apps Script entrypoints", () => {
     expect(consoleLog).toHaveBeenCalledWith(expect.stringContaining("Scheduled weekly tracker finished"));
   });
 
+  it("describes dry runs as skipping weekly data rows only", async () => {
+    const alert = vi.fn();
+    vi.stubGlobal("SpreadsheetApp", {
+      getActiveSpreadsheet: vi.fn(() => spreadsheetStub),
+      getUi: vi.fn(() => ({ alert })),
+    });
+    vi.stubGlobal("UrlFetchApp", {
+      fetch: vi.fn(),
+    });
+
+    const { runWeeklyTrackerDryRun } = await import("../src/gas");
+
+    await runWeeklyTrackerDryRun();
+
+    expect(alert).toHaveBeenCalledWith(expect.stringContaining("No weekly data rows were written."));
+  });
+
   it("prefetches source URLs through UrlFetchApp.fetchAll before fetchText reads the cache", async () => {
     const fetch = vi.fn();
     const fetchAll = vi.fn(() => [responseFor(200, "cached app store"), responseFor(403, "blocked social")]);

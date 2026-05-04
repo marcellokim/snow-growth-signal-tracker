@@ -97,7 +97,7 @@ export async function runWeeklyTracker(): Promise<void> {
 export async function runWeeklyTrackerDryRun(): Promise<void> {
   const result = await executeWeeklyTracker(true);
   SpreadsheetApp.getUi().alert(
-    `Dry run finished for ${result.week}. Signals: ${result.collectedSignals}; sources: ${result.sourceRuns}. No rows were written.`,
+    `Dry run finished for ${result.week}. Signals: ${result.collectedSignals}; sources: ${result.sourceRuns}. No weekly data rows were written.`,
   );
 }
 
