@@ -52,6 +52,9 @@ describe("workbook schema", () => {
 describe("sheet names", () => {
   it("keeps sheet names as a closed union", () => {
     const name: SheetName = "Weekly Summary";
+    // @ts-expect-error Invalid sheet names must be rejected at compile time.
+    const invalidName: SheetName = "Invalid Sheet";
     expect(name).toBe("Weekly Summary");
+    expect(invalidName).toBe("Invalid Sheet");
   });
 });
