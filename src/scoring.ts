@@ -8,7 +8,7 @@ const CONFIDENCE_VALUE: Record<Confidence, number> = {
 };
 
 export function scoreSignal(signal: GrowthSignal, repetition: number): GrowthSignal {
-  if (!signal.evidence_url) {
+  if (!signal.evidence_url.trim()) {
     return {
       ...signal,
       score: 0,
@@ -17,14 +17,14 @@ export function scoreSignal(signal: GrowthSignal, repetition: number): GrowthSig
   }
 
   const raw =
-    signal.change_strength * (DEFAULT_SCORING_WEIGHTS.changeStrength / 100) +
-    signal.growth_relevance * (DEFAULT_SCORING_WEIGHTS.growthRelevance / 100) +
+    clampScoreInput(signal.change_strength) * (DEFAULT_SCORING_WEIGHTS.changeStrength / 100) +
+    clampScoreInput(signal.growth_relevance) * (DEFAULT_SCORING_WEIGHTS.growthRelevance / 100) +
     CONFIDENCE_VALUE[signal.confidence] * (DEFAULT_SCORING_WEIGHTS.confidence / 100) +
-    repetition * (DEFAULT_SCORING_WEIGHTS.repetition / 100);
+    clampScoreInput(repetition) * (DEFAULT_SCORING_WEIGHTS.repetition / 100);
 
   return {
     ...signal,
-    score: Math.round(raw),
+    score: clampScoreInput(Math.round(raw)),
   };
 }
 
@@ -67,4 +67,11 @@ function confidenceRank(confidence: Confidence): number {
 
 function appendNote(existing: string, note: string): string {
   return existing ? `${existing} ${note}` : note;
+}
+
+function clampScoreInput(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.min(100, Math.max(0, value));
 }

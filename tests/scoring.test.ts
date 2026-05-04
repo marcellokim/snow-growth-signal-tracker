@@ -34,6 +34,24 @@ describe("scoreSignal", () => {
     expect(scored.score).toBe(0);
     expect(scored.notes).toContain("Excluded from Top 5");
   });
+
+  it("treats whitespace-only evidence as evidence-free", () => {
+    const scored = scoreSignal({ ...baseSignal, evidence_url: "   " }, 80);
+    expect(scored.score).toBe(0);
+    expect(scored.notes).toContain("Excluded from Top 5");
+  });
+
+  it("keeps malformed and out-of-range numeric inputs within the score range", () => {
+    const malformedSignal = {
+      ...baseSignal,
+      change_strength: Number.NaN,
+      growth_relevance: 500,
+    } as unknown as GrowthSignal;
+    const scored = scoreSignal(malformedSignal, -50);
+    expect(Number.isNaN(scored.score)).toBe(false);
+    expect(scored.score).toBeGreaterThanOrEqual(0);
+    expect(scored.score).toBeLessThanOrEqual(100);
+  });
 });
 
 describe("compareStoreKeywordRows", () => {
@@ -62,5 +80,47 @@ describe("compareStoreKeywordRows", () => {
     ];
     const result = compareStoreKeywordRows(previous, current);
     expect(result[0].change_from_prior_week).toBe("changed");
+  });
+
+  it("marks current rows as new when no prior row matches", () => {
+    const result = compareStoreKeywordRows([], [
+      {
+        week: "2026-W19",
+        app: "EPIK",
+        market: "US",
+        store: "App Store",
+        keyword_or_message: "AI headshot photo editor",
+        evidence_url: "b",
+        confidence: "high",
+      },
+    ]);
+    expect(result[0].change_from_prior_week).toBe("new");
+  });
+
+  it("marks current rows as unchanged when the prior message matches exactly", () => {
+    const previous: TableRow[] = [
+      {
+        week: "2026-W18",
+        app: "EPIK",
+        market: "US",
+        store: "App Store",
+        keyword_or_message: "AI headshot photo editor",
+        evidence_url: "a",
+        confidence: "high",
+      },
+    ];
+    const current: TableRow[] = [
+      {
+        week: "2026-W19",
+        app: "EPIK",
+        market: "US",
+        store: "App Store",
+        keyword_or_message: "AI headshot photo editor",
+        evidence_url: "b",
+        confidence: "high",
+      },
+    ];
+    const result = compareStoreKeywordRows(previous, current);
+    expect(result[0].change_from_prior_week).toBe("unchanged");
   });
 });
