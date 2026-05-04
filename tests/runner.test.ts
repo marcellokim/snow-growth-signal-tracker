@@ -1,6 +1,7 @@
 import { schemaFor, type SheetName, type TableRow } from "../src/domain";
 import { InMemorySheetGateway, ensureWorkbookSchema } from "../src/sheets";
 import { runWeeklyTracker } from "../src/runner";
+import { DEFAULT_MARKETS, DEFAULT_TRACKED_APPS } from "../src/config";
 
 describe("runWeeklyTracker", () => {
   it("updates Weekly Summary, Growth Signals, App Matrix, Store Keywords, and Sources & Runs", async () => {
@@ -54,6 +55,36 @@ describe("runWeeklyTracker", () => {
     expect(gateway.getRows("App Matrix")).toHaveLength(1);
     expect(gateway.getRows("Store Keywords")).toHaveLength(1);
     expect(gateway.getRows("Sources & Runs")).toHaveLength(1);
+  });
+
+  it("prefetches planned source URLs before collecting sources", async () => {
+    const gateway = new InMemorySheetGateway();
+    ensureWorkbookSchema(gateway);
+    const events: string[] = [];
+    const prefetchedUrls: string[] = [];
+
+    await runWeeklyTracker({
+      gateway,
+      week: "2026-W19",
+      prefetchText: async (urls) => {
+        events.push("prefetch");
+        prefetchedUrls.push(...urls);
+      },
+      fetchText: async (url) => {
+        events.push(`fetch:${url}`);
+        return matchingAppStoreAndEmptyPublicPages(url);
+      },
+      now: () => "2026-05-04T00:00:00.000Z",
+      dryRun: true,
+    });
+
+    expect(events[0]).toBe("prefetch");
+    expect(new Set(prefetchedUrls).size).toBe(prefetchedUrls.length);
+    expect(prefetchedUrls.length).toBeGreaterThanOrEqual(DEFAULT_TRACKED_APPS.length * 3);
+    expect(prefetchedUrls.length).toBeLessThanOrEqual(DEFAULT_TRACKED_APPS.length * DEFAULT_MARKETS.length * 3);
+    expect(prefetchedUrls.some((url) => url.includes("itunes.apple.com/search"))).toBe(true);
+    expect(prefetchedUrls.some((url) => url.includes("tiktok.com/search"))).toBe(true);
+    expect(prefetchedUrls.some((url) => url.includes("instagram.com/explore/search"))).toBe(true);
   });
 
   it("preserves older week rows while replacing only current week rows", async () => {

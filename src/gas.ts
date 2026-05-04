@@ -1,19 +1,67 @@
 import { runWeeklyTracker as runTrackerCore, type RunResult } from "./runner";
 import { AppsScriptSheetGateway } from "./sheets";
 
+const FETCH_OPTIONS: GoogleAppsScript.URL_Fetch.URLFetchRequestOptions = {
+  muteHttpExceptions: true,
+  followRedirects: true,
+  headers: {
+    "User-Agent": "SNOW Growth Signal Tracker Apps Script",
+  },
+};
+
+const prefetchedText = new Map<string, string | Error>();
+
 function fetchText(url: string): Promise<string> {
-  const response = UrlFetchApp.fetch(url, {
-    muteHttpExceptions: true,
-    followRedirects: true,
-    headers: {
-      "User-Agent": "SNOW Growth Signal Tracker Apps Script",
-    },
+  const cached = prefetchedText.get(url);
+  if (typeof cached === "string") {
+    return Promise.resolve(cached);
+  }
+  if (cached instanceof Error) {
+    return Promise.reject(cached);
+  }
+  const response = UrlFetchApp.fetch(url, FETCH_OPTIONS);
+  try {
+    return Promise.resolve(responseText(response));
+  } catch (error) {
+    return Promise.reject(asError(error));
+  }
+}
+
+function prefetchText(urls: readonly string[]): Promise<void> {
+  const uncachedUrls = [...new Set(urls)].filter((url) => !prefetchedText.has(url));
+  if (!uncachedUrls.length) {
+    return Promise.resolve();
+  }
+
+  let responses: GoogleAppsScript.URL_Fetch.HTTPResponse[];
+  try {
+    responses = UrlFetchApp.fetchAll(uncachedUrls.map((url) => ({ url, ...FETCH_OPTIONS })));
+  } catch (error) {
+    console.warn("Source prefetch failed; falling back to individual fetches.", error);
+    return Promise.resolve();
+  }
+
+  responses.forEach((response, index) => {
+    const url = uncachedUrls[index];
+    try {
+      prefetchedText.set(url, responseText(response));
+    } catch (error) {
+      prefetchedText.set(url, asError(error));
+    }
   });
+  return Promise.resolve();
+}
+
+function responseText(response: GoogleAppsScript.URL_Fetch.HTTPResponse): string {
   const code = response.getResponseCode();
   if (code >= 400) {
     throw new Error(`HTTP ${code}`);
   }
-  return Promise.resolve(response.getContentText());
+  return response.getContentText();
+}
+
+function asError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
 }
 
 function now(): string {
@@ -72,6 +120,7 @@ async function executeWeeklyTracker(dryRun: boolean): Promise<RunResult> {
     gateway,
     week: currentIsoWeek(),
     fetchText,
+    prefetchText,
     now,
     dryRun,
   });

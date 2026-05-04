@@ -38,7 +38,7 @@ export class AppStoreSearchConnector {
   ) {}
 
   async collect(input: AppStoreCollectInput): Promise<ConnectorResult> {
-    const url = `https://itunes.apple.com/search?entity=software&country=${encodeURIComponent(input.market)}&term=${encodeURIComponent(input.term)}`;
+    const url = appStoreSearchUrl(input);
     try {
       const payload = JSON.parse(await this.fetchText(url)) as { results?: Array<Record<string, unknown>> };
       const first = payload.results?.find((result) => appTitleMatches(input.app, String(result.trackName ?? "")));
@@ -232,6 +232,10 @@ export class ManualQueueConnector {
       appMatrix: [],
     };
   }
+}
+
+export function appStoreSearchUrl(input: AppStoreCollectInput): string {
+  return `https://itunes.apple.com/search?entity=software&country=${encodeURIComponent(input.market)}&term=${encodeURIComponent(input.term)}`;
 }
 
 function extractAiKeywords(description: string): string {

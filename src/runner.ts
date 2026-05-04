@@ -2,6 +2,7 @@ import { DEFAULT_MARKETS, DEFAULT_TRACKED_APPS } from "./config";
 import {
   AppStoreSearchConnector,
   PublicUrlConnector,
+  appStoreSearchUrl,
   type ConnectorResult,
   type FetchText,
   type Now,
@@ -15,9 +16,12 @@ export type RunOptions = {
   gateway: SheetGateway;
   week: string;
   fetchText: FetchText;
+  prefetchText?: PrefetchText;
   now: Now;
   dryRun: boolean;
 };
+
+export type PrefetchText = (urls: readonly string[]) => Promise<void>;
 
 export type RunResult = {
   week: string;
@@ -32,31 +36,12 @@ export async function runWeeklyTracker(options: RunOptions): Promise<RunResult> 
   const results: ConnectorResult[] = [];
   const appStore = new AppStoreSearchConnector(options.fetchText, options.now);
   const publicUrl = new PublicUrlConnector(options.fetchText, options.now);
+  const plans = buildCollectionPlans(options.week, appStore, publicUrl);
 
-  for (const app of DEFAULT_TRACKED_APPS) {
-    for (const market of DEFAULT_MARKETS) {
-      results.push(await appStore.collect({ week: options.week, app: app.name, market, term: app.searchTerms[market] }));
-      results.push(
-        await publicUrl.collect({
-          week: options.week,
-          app: app.name,
-          market,
-          channel: "TikTok",
-          sourceName: "TikTok public search",
-          sourceUrl: `https://www.tiktok.com/search?q=${encodeURIComponent(`${app.name} AI photo`)}`,
-        }),
-      );
-      results.push(
-        await publicUrl.collect({
-          week: options.week,
-          app: app.name,
-          market,
-          channel: "Instagram",
-          sourceName: "Instagram public search",
-          sourceUrl: `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(app.name)}`,
-        }),
-      );
-    }
+  await options.prefetchText?.(uniqueUrls(plans.map((plan) => plan.url)));
+
+  for (const plan of plans) {
+    results.push(await plan.collect());
   }
 
   const storeKeywordRows = results.flatMap((result) => result.storeKeywords);
@@ -83,6 +68,51 @@ export async function runWeeklyTracker(options: RunOptions): Promise<RunResult> 
     sourceRuns: sourceRuns.length,
     dryRun: options.dryRun,
   };
+}
+
+type CollectionPlan = {
+  url: string;
+  collect: () => Promise<ConnectorResult>;
+};
+
+function buildCollectionPlans(
+  week: string,
+  appStore: AppStoreSearchConnector,
+  publicUrl: PublicUrlConnector,
+): CollectionPlan[] {
+  const plans: CollectionPlan[] = [];
+
+  for (const app of DEFAULT_TRACKED_APPS) {
+    for (const market of DEFAULT_MARKETS) {
+      const appStoreInput = { week, app: app.name, market, term: app.searchTerms[market] };
+      const tiktokInput = {
+        week,
+        app: app.name,
+        market,
+        channel: "TikTok" as const,
+        sourceName: "TikTok public search",
+        sourceUrl: `https://www.tiktok.com/search?q=${encodeURIComponent(`${app.name} AI photo`)}`,
+      };
+      const instagramInput = {
+        week,
+        app: app.name,
+        market,
+        channel: "Instagram" as const,
+        sourceName: "Instagram public search",
+        sourceUrl: `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(app.name)}`,
+      };
+
+      plans.push({ url: appStoreSearchUrl(appStoreInput), collect: () => appStore.collect(appStoreInput) });
+      plans.push({ url: tiktokInput.sourceUrl, collect: () => publicUrl.collect(tiktokInput) });
+      plans.push({ url: instagramInput.sourceUrl, collect: () => publicUrl.collect(instagramInput) });
+    }
+  }
+
+  return plans;
+}
+
+function uniqueUrls(urls: readonly string[]): string[] {
+  return [...new Set(urls)];
 }
 
 function readDataRows<T extends TableRow>(gateway: SheetGateway, sheetName: SheetName): T[] {
