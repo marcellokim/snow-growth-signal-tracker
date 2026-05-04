@@ -23,24 +23,36 @@ Expected local result:
 
 1. Create a Google Sheets workbook named `SNOW Growth Signal Tracker`.
 2. Open Extensions -> Apps Script once so Google creates the bound Apps Script project surface.
-3. Create or connect a clasp project for the workbook.
-4. From this repo, build and push the generated Apps Script files:
+3. In Apps Script Project Settings, copy the Script ID for that bound project.
+4. From this repo, authenticate clasp and create a local `.clasp.json` that points at the bound project and uploads only generated files from `build/`:
 
 ```bash
 npm run build
 npx clasp login
-npx clasp create --type sheets --title "SNOW Growth Signal Tracker"
+npx clasp clone <SCRIPT_ID> --rootDir build
 npx clasp push
 ```
 
-If a `.clasp.json` already exists for the target workbook, do not create a second project. Build and push to the existing project:
+The resulting `.clasp.json` should stay local and should look like this shape:
+
+```json
+{
+  "scriptId": "<SCRIPT_ID>",
+  "rootDir": "build"
+}
+```
+
+If a `.clasp.json` already exists for the target workbook, confirm it has `"rootDir": "build"`. Then build and push to the existing project:
 
 ```bash
 npm run build
+npx clasp status
 npx clasp push
 ```
 
-After `npx clasp push`, Apps Script should contain the generated `build/Code.js` bundle and `build/appsscript.json` manifest. Reload the Sheet after pushing so the custom menu is rebuilt by `onOpen`.
+`npx clasp status` should list only `Code.js` and `appsscript.json` from the `build/` root. If it lists source files, root-level `appsscript.json`, or `node_modules`, fix `.clasp.json` before pushing.
+
+After `npx clasp push`, Apps Script should contain the generated `Code.js` bundle and `appsscript.json` manifest from `build/`. Reload the Sheet after pushing so the custom menu is rebuilt by `onOpen`.
 
 ## First Dry Run and Run Workflow
 
@@ -48,7 +60,7 @@ After `npx clasp push`, Apps Script should contain the generated `build/Code.js`
 2. Reload the sheet so the `Growth Tracker` menu appears.
 3. Run Growth Tracker -> Dry Run Weekly Tracker.
 4. Authorize the script when Google prompts for permissions.
-5. Confirm the dry-run alert says no rows were written.
+5. Confirm the dry-run alert says no weekly data rows were written. On a new workbook, the dry run may still create missing tabs and header rows.
 6. Run Growth Tracker -> Run Weekly Tracker.
 7. Check these tabs:
    - `Weekly Summary`
