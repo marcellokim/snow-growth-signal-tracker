@@ -119,6 +119,9 @@ function cloneRectangularRows(name: SheetName, rows: unknown[][]): unknown[][] {
     return [];
   }
   const columnCount = rows[0].length;
+  if (columnCount === 0) {
+    throw new Error(`Rows for sheet "${name}" must have at least one column`);
+  }
   const raggedRowIndex = rows.findIndex((row) => row.length !== columnCount);
   if (raggedRowIndex !== -1) {
     throw new Error(`Rows for sheet "${name}" must be rectangular`);

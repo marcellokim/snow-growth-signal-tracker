@@ -144,6 +144,20 @@ describe("sheet gateway", () => {
     expect(gateway.getRows("Growth Signals")).toEqual(existingRows);
   });
 
+  it("rejects zero-width replacement rows before changing existing rows", () => {
+    const gateway = new InMemorySheetGateway();
+    const existingRows = [
+      ["week", "app"],
+      ["2026-W09", "SNOW"],
+    ];
+    gateway.replaceRows("Growth Signals", existingRows);
+
+    expect(() => gateway.replaceRows("Growth Signals", [[]])).toThrow(
+      'Rows for sheet "Growth Signals" must have at least one column',
+    );
+    expect(gateway.getRows("Growth Signals")).toEqual(existingRows);
+  });
+
   it("rejects ragged appended rows before appending anything", () => {
     const gateway = new InMemorySheetGateway();
     const existingRows = [
@@ -154,6 +168,20 @@ describe("sheet gateway", () => {
 
     expect(() => gateway.appendRows("Growth Signals", [["a"], ["b", "c"]])).toThrow(
       "Rows for sheet \"Growth Signals\" must be rectangular",
+    );
+    expect(gateway.getRows("Growth Signals")).toEqual(existingRows);
+  });
+
+  it("rejects zero-width appended rows before appending anything", () => {
+    const gateway = new InMemorySheetGateway();
+    const existingRows = [
+      ["week", "app"],
+      ["2026-W09", "SNOW"],
+    ];
+    gateway.replaceRows("Growth Signals", existingRows);
+
+    expect(() => gateway.appendRows("Growth Signals", [[]])).toThrow(
+      'Rows for sheet "Growth Signals" must have at least one column',
     );
     expect(gateway.getRows("Growth Signals")).toEqual(existingRows);
   });
