@@ -41,9 +41,12 @@ export class AppStoreSearchConnector {
     const url = `https://itunes.apple.com/search?entity=software&country=${encodeURIComponent(input.market)}&term=${encodeURIComponent(input.term)}`;
     try {
       const payload = JSON.parse(await this.fetchText(url)) as { results?: Array<Record<string, unknown>> };
-      const first = payload.results?.[0];
+      const first = payload.results?.find((result) => appTitleMatches(input.app, String(result.trackName ?? "")));
       if (!first) {
-        return this.emptyResult(input, url, "manual_needed", "Verify App Store listing manually; search returned no app result.");
+        const reason = payload.results?.length
+          ? "Verify App Store listing manually; search result did not match the requested app."
+          : "Verify App Store listing manually; search returned no app result.";
+        return this.emptyResult(input, url, "manual_needed", reason);
       }
       const title = String(first.trackName ?? input.app);
       const description = String(first.description ?? "");
@@ -75,7 +78,7 @@ export class AppStoreSearchConnector {
             market: input.market,
             core_features: "",
             ai_features: extractAiKeywords(description),
-            paid_model: price === "Free" ? "Free app; in-app purchases require manual pricing check" : "Paid app",
+            paid_model: paidModelFor(price),
             price_summary: price,
             subscription_or_credit_notes: "Manual paywall or subscription check required for exact in-app pricing.",
             last_checked_at: this.now(),
@@ -136,13 +139,19 @@ export class PublicUrlConnector {
     try {
       const html = await this.fetchText(input.sourceUrl);
       const title = extractTag(html, /<title[^>]*>([\s\S]*?)<\/title>/i);
-      const description = extractTag(html, /<meta\s+name=["']description["']\s+content=["']([^"']*)["'][^>]*>/i);
+      const description = extractDescription(html);
       const summary = [title, description].filter(Boolean).join(" | ").trim();
       const status: SourceStatus = summary ? "partial" : "changed_structure";
       const confidence: Confidence = input.channel === "Official Web" ? "medium" : "low";
+      const needsManualReview = status !== "partial" || confidence === "low";
+      const nextAction = status !== "partial"
+        ? "Review source manually; parser found no title or description."
+        : confidence === "low"
+          ? "Review public results manually; social pages are low-confidence partial extracts."
+          : "Review extracted public page summary.";
       return {
         status,
-        sourceRun: this.sourceRun(input, status, "", status !== "partial", status === "partial" ? "Review extracted public page summary." : "Review source manually; parser found no title or description."),
+        sourceRun: this.sourceRun(input, status, "", needsManualReview, nextAction),
         signals: summary
           ? [
               {
@@ -167,9 +176,14 @@ export class PublicUrlConnector {
         appMatrix: [],
       };
     } catch (error) {
+      const message = errorMessage(error);
+      const status: SourceStatus = isBlockedLikeError(message) ? "blocked" : "error";
+      const nextAction = status === "blocked"
+        ? "Open the public source manually without logging in and record visible patterns."
+        : "Retry public source fetch or check the source manually if the error persists.";
       return {
-        status: "blocked",
-        sourceRun: this.sourceRun(input, "blocked", errorMessage(error), true, "Open the public source manually without logging in and record visible patterns."),
+        status,
+        sourceRun: this.sourceRun(input, status, message, true, nextAction),
         signals: [],
         storeKeywords: [],
         appMatrix: [],
@@ -225,6 +239,26 @@ function extractAiKeywords(description: string): string {
   return [...new Set(matches ?? [])].join(", ");
 }
 
+function appTitleMatches(app: string, title: string): boolean {
+  const normalizedApp = normalizeAppName(app);
+  const normalizedTitle = normalizeAppName(title);
+  return normalizedTitle === normalizedApp || normalizedTitle.includes(normalizedApp);
+}
+
+function normalizeAppName(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function paidModelFor(price: string): string {
+  if (price === "Free") {
+    return "Free app; in-app purchases require manual pricing check";
+  }
+  if (/^\s*(?:[$€£¥]\s*\d+(?:[.,]\d+)?|\d+(?:[.,]\d+)?\s*(?:USD|EUR|GBP|JPY|KRW))\s*$/i.test(price)) {
+    return "Paid app";
+  }
+  return "Unknown or localized price; manual pricing check required";
+}
+
 function containsGrowthLanguage(text: string): boolean {
   return /AI|viral|trend|template|avatar|headshot|beauty|edit|share|photo/i.test(text);
 }
@@ -232,6 +266,27 @@ function containsGrowthLanguage(text: string): boolean {
 function extractTag(html: string, pattern: RegExp): string {
   const match = html.match(pattern);
   return decodeHtml(match?.[1]?.replace(/\s+/g, " ").trim() ?? "");
+}
+
+function extractDescription(html: string): string {
+  const metaTags = html.match(/<meta\b[^>]*>/gi) ?? [];
+  for (const tag of metaTags) {
+    const attrs = extractAttributes(tag);
+    const name = attrs.get("name")?.toLowerCase();
+    const property = attrs.get("property")?.toLowerCase();
+    if (name === "description" || property === "og:description") {
+      return decodeHtml(attrs.get("content")?.replace(/\s+/g, " ").trim() ?? "");
+    }
+  }
+  return "";
+}
+
+function extractAttributes(tag: string): Map<string, string> {
+  const attrs = new Map<string, string>();
+  for (const match of tag.matchAll(/([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*(["'])([\s\S]*?)\2/g)) {
+    attrs.set(match[1].toLowerCase(), match[3]);
+  }
+  return attrs;
 }
 
 function decodeHtml(value: string): string {
@@ -245,4 +300,8 @@ function decodeHtml(value: string): string {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function isBlockedLikeError(message: string): boolean {
+  return /(?:HTTP\s*)?(?:401|403|429)\b|blocked|rate limit|forbidden/i.test(message);
 }
