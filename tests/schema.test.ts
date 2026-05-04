@@ -119,6 +119,17 @@ describe("sheet gateway", () => {
     );
   });
 
+  it("rejects required headers with an extra trailing column", () => {
+    const gateway = new InMemorySheetGateway();
+    ensureWorkbookSchema(gateway);
+    const growthSignalHeaders = [...REQUIRED_SHEETS.find((sheet) => sheet.name === "Growth Signals")!.columns];
+    gateway.replaceRows("Growth Signals", [[...growthSignalHeaders, "unexpected_column"]]);
+
+    expect(() => ensureWorkbookSchema(gateway)).toThrow(
+      'Sheet "Growth Signals" header must match required column order',
+    );
+  });
+
   it("rejects ragged replacement rows before changing existing rows", () => {
     const gateway = new InMemorySheetGateway();
     const existingRows = [

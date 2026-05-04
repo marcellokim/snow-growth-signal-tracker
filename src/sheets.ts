@@ -127,5 +127,5 @@ function cloneRectangularRows(name: SheetName, rows: unknown[][]): unknown[][] {
 }
 
 function headersMatchExpectedOrder(header: string[], expectedHeader: string[]): boolean {
-  return expectedHeader.every((column, index) => header[index] === column);
+  return header.length === expectedHeader.length && expectedHeader.every((column, index) => header[index] === column);
 }
