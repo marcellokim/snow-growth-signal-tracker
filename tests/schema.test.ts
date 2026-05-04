@@ -89,7 +89,7 @@ describe("sheet gateway", () => {
   it("creates all required sheets with headers", () => {
     const gateway = new InMemorySheetGateway();
     ensureWorkbookSchema(gateway);
-    expect(gateway.getSheetNames()).toContain("Weekly Summary");
+    expect(gateway.getSheetNames()).toEqual(REQUIRED_SHEETS.map((sheet) => sheet.name));
     expect(gateway.getRows("Growth Signals")[0]).toEqual([
       "week",
       "app",
