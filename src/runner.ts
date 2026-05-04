@@ -6,7 +6,7 @@ import {
   type FetchText,
   type Now,
 } from "./connectors";
-import { REQUIRED_SHEETS, type TableRow } from "./domain";
+import { REQUIRED_SHEETS, type Confidence, type GrowthSignal, type SheetName, type TableRow } from "./domain";
 import { compareStoreKeywordRows, repetitionScore, scoreSignal } from "./scoring";
 import { ensureWorkbookSchema, objectsToRows, rowsToObjects, type SheetGateway } from "./sheets";
 import { buildWeeklySummaryRows } from "./summary";
@@ -59,21 +59,22 @@ export async function runWeeklyTracker(options: RunOptions): Promise<RunResult> 
     }
   }
 
-  const allSignals = results.flatMap((result) => result.signals);
+  const storeKeywordRows = results.flatMap((result) => result.storeKeywords);
+  const previousStoreRows = latestPriorStoreRows(readDataRows<TableRow>(options.gateway, "Store Keywords"), options.week);
+  const comparedStoreRows = compareStoreKeywordRows(previousStoreRows, storeKeywordRows);
+  const storeKeywordSignals = buildStoreKeywordSignals(options.week, comparedStoreRows);
+  const allSignals = [...results.flatMap((result) => result.signals), ...storeKeywordSignals];
   const scoredSignals = allSignals.map((signal) => scoreSignal(signal, repetitionScore(signal, allSignals)));
   const sourceRuns = results.map((result) => result.sourceRun);
   const appMatrix = results.flatMap((result) => result.appMatrix);
-  const storeKeywordRows = results.flatMap((result) => result.storeKeywords);
-  const previousStoreRows = readDataRows<TableRow>(options.gateway, "Store Keywords").filter((row) => row.week !== options.week);
-  const comparedStoreRows = compareStoreKeywordRows(previousStoreRows, storeKeywordRows);
   const summaryRows = buildWeeklySummaryRows({ week: options.week, signals: scoredSignals, sourceRuns });
 
   if (!options.dryRun) {
-    replaceDataRows(options.gateway, "Weekly Summary", summaryRows);
-    replaceDataRows(options.gateway, "Growth Signals", scoredSignals as unknown as TableRow[]);
-    replaceDataRows(options.gateway, "App Matrix", appMatrix);
-    replaceDataRows(options.gateway, "Store Keywords", comparedStoreRows);
-    replaceDataRows(options.gateway, "Sources & Runs", sourceRuns as unknown as TableRow[]);
+    replaceWeekRows(options.gateway, "Weekly Summary", options.week, summaryRows);
+    replaceWeekRows(options.gateway, "Growth Signals", options.week, scoredSignals as unknown as TableRow[]);
+    replaceAppMatrixRows(options.gateway, appMatrix);
+    replaceWeekRows(options.gateway, "Store Keywords", options.week, comparedStoreRows);
+    replaceWeekRows(options.gateway, "Sources & Runs", options.week, sourceRuns as unknown as TableRow[]);
   }
 
   return {
@@ -84,7 +85,7 @@ export async function runWeeklyTracker(options: RunOptions): Promise<RunResult> 
   };
 }
 
-function readDataRows<T extends TableRow>(gateway: SheetGateway, sheetName: "Store Keywords"): T[] {
+function readDataRows<T extends TableRow>(gateway: SheetGateway, sheetName: SheetName): T[] {
   const schema = REQUIRED_SHEETS.find((sheet) => sheet.name === sheetName);
   if (!schema) {
     throw new Error(`Missing schema: ${sheetName}`);
@@ -93,10 +94,87 @@ function readDataRows<T extends TableRow>(gateway: SheetGateway, sheetName: "Sto
   return rowsToObjects<T>([...schema.columns], rows.slice(1));
 }
 
-function replaceDataRows(gateway: SheetGateway, sheetName: (typeof REQUIRED_SHEETS)[number]["name"], rows: TableRow[]): void {
+function replaceWeekRows(gateway: SheetGateway, sheetName: SheetName, week: string, rows: TableRow[]): void {
+  const existingRows = readDataRows<TableRow>(gateway, sheetName).filter((row) => row.week !== week);
+  replaceDataRows(gateway, sheetName, [...existingRows, ...rows]);
+}
+
+function replaceAppMatrixRows(gateway: SheetGateway, rows: TableRow[]): void {
+  const replacementKeys = new Set(rows.map((row) => appMarketKey(row)));
+  const existingRows = readDataRows<TableRow>(gateway, "App Matrix").filter((row) => !replacementKeys.has(appMarketKey(row)));
+  replaceDataRows(gateway, "App Matrix", [...existingRows, ...rows]);
+}
+
+function replaceDataRows(gateway: SheetGateway, sheetName: SheetName, rows: TableRow[]): void {
   const schema = REQUIRED_SHEETS.find((sheet) => sheet.name === sheetName);
   if (!schema) {
     throw new Error(`Missing schema: ${sheetName}`);
   }
   gateway.replaceRows(sheetName, [[...schema.columns], ...objectsToRows(schema.columns, rows)]);
+}
+
+function latestPriorStoreRows(rows: TableRow[], currentWeek: string): TableRow[] {
+  const currentRank = weekRank(currentWeek);
+  const latestRows = new Map<string, { rank: number; row: TableRow }>();
+
+  for (const row of rows) {
+    const rank = weekRank(String(row.week ?? ""));
+    if (rank >= currentRank) {
+      continue;
+    }
+    const key = storeKeywordKey(row);
+    const existing = latestRows.get(key);
+    if (!existing || rank > existing.rank) {
+      latestRows.set(key, { rank, row });
+    }
+  }
+
+  return [...latestRows.values()].map((entry) => entry.row);
+}
+
+function buildStoreKeywordSignals(week: string, rows: TableRow[]): GrowthSignal[] {
+  return rows
+    .filter((row) => row.change_from_prior_week === "new" || row.change_from_prior_week === "changed")
+    .map((row) => {
+      const change = String(row.change_from_prior_week);
+      return {
+        week,
+        app: String(row.app),
+        market: String(row.market) as GrowthSignal["market"],
+        channel: "App Store",
+        signal_type: "store_keyword",
+        signal_summary: `${row.app} ${row.market} App Store keywords ${change}: ${row.keyword_or_message}`.slice(0, 500),
+        growth_relevance: change === "new" ? 65 : 75,
+        change_strength: change === "new" ? 60 : 70,
+        confidence: confidenceFromRow(row),
+        score: 0,
+        evidence_url: String(row.evidence_url ?? ""),
+        source_status: "ok",
+        manual_check_needed: false,
+        notes: `Store keyword row marked ${change} versus latest prior week.`,
+      };
+    });
+}
+
+function confidenceFromRow(row: TableRow): Confidence {
+  if (row.confidence === "high" || row.confidence === "medium" || row.confidence === "low") {
+    return row.confidence;
+  }
+  return "medium";
+}
+
+function storeKeywordKey(row: TableRow): string {
+  return [row.app, row.market, row.store].map((value) => String(value ?? "")).join("\u0000");
+}
+
+function appMarketKey(row: TableRow): string {
+  return [row.app, row.market].map((value) => String(value ?? "")).join("\u0000");
+}
+
+function weekRank(week: string): number {
+  const match = week.match(/^(\d{4})-W(\d{1,2})$/);
+  if (!match) {
+    return Number.NEGATIVE_INFINITY;
+  }
+  return Number(match[1]) * 100 + Number(match[2]);
 }
