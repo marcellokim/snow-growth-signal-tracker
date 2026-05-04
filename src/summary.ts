@@ -9,7 +9,7 @@ export type SummaryInput = {
 
 export function buildWeeklySummaryRows(input: SummaryInput): TableRow[] {
   const eligible = rankSignals(input.signals).filter(
-    (signal) => signal.evidence_url && !(signal.confidence === "low" && signal.manual_check_needed),
+    (signal) => hasEvidence(signal) && !(signal.confidence === "low" && signal.manual_check_needed),
   );
   const top = eligible[0];
   const rows: TableRow[] = [
@@ -56,13 +56,17 @@ export function buildWeeklySummaryRows(input: SummaryInput): TableRow[] {
   });
 
   const lowConfidenceSignals = rankSignals(input.signals).filter(
-    (signal) => signal.confidence === "low" && signal.evidence_url,
+    (signal) => signal.confidence === "low" && hasEvidence(signal),
   );
   lowConfidenceSignals.slice(0, 5).forEach((signal, index) => {
     rows.push(toSummaryRow(input.week, "Observation Candidates", index + 1, signal));
   });
 
   return rows;
+}
+
+function hasEvidence(signal: GrowthSignal): boolean {
+  return Boolean(signal.evidence_url.trim());
 }
 
 function toSummaryRow(week: string, section: string, rank: number, signal: GrowthSignal): TableRow {

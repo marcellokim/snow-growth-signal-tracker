@@ -41,6 +41,32 @@ describe("buildWeeklySummaryRows", () => {
     expect(rows.some((row) => row.section === "Top Changes" && row.evidence_url === "")).toBe(false);
   });
 
+  it("excludes whitespace-only evidence from top changes", () => {
+    const rows = buildWeeklySummaryRows({
+      week: "2026-W19",
+      signals: [signal({ score: 99, evidence_url: "   " }), signal({ app: "SODA", score: 70 })],
+      sourceRuns: [],
+    });
+    expect(rows.some((row) => row.section === "Top Changes" && row.evidence_url === "   ")).toBe(false);
+  });
+
+  it("excludes whitespace-only evidence from observation candidates", () => {
+    const rows = buildWeeklySummaryRows({
+      week: "2026-W19",
+      signals: [
+        signal({
+          app: "SNOW",
+          confidence: "low",
+          evidence_url: "   ",
+          manual_check_needed: true,
+          score: 90,
+        }),
+      ],
+      sourceRuns: [],
+    });
+    expect(rows.some((row) => row.section === "Observation Candidates")).toBe(false);
+  });
+
   it("adds manual check rows for blocked sources", () => {
     const sourceRuns: SourceRun[] = [
       {
