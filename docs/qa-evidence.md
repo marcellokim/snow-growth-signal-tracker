@@ -51,6 +51,9 @@ Verified workbook behavior:
 - `Store Keywords` contained App Store rows for the tracked app and market matrix.
 - `Growth Signals` contained public TikTok and Instagram signal rows with low-confidence/manual-check flags where appropriate.
 - `Sources & Runs` recorded App Store rows as `ok` where reachable, and social rows as `partial` or `blocked` when public pages were rate-limited or low-confidence.
+- Portfolio screenshot assets were generated from the same live QA values with private workbook identifiers removed:
+  - `docs/assets/weekly-summary-preview.png`
+  - `docs/assets/source-runs-preview.png`
 
 Known live QA caveats:
 

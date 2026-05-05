@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="920" viewBox="0 0 1600 920">
+  <defs>
+    <style>
+      .bg { fill: #f5f7fb; }
+      .panel { fill: #ffffff; stroke: #d8dee9; stroke-width: 1; }
+      .title { font: 700 42px "Apple SD Gothic Neo", "Noto Sans KR", Arial, sans-serif; fill: #162033; }
+      .subtitle { font: 500 19px "Apple SD Gothic Neo", "Noto Sans KR", Arial, sans-serif; fill: #667085; }
+      .section { font: 700 24px "Apple SD Gothic Neo", "Noto Sans KR", Arial, sans-serif; fill: #1d2939; }
+      .label { font: 700 14px "Apple SD Gothic Neo", "Noto Sans KR", Arial, sans-serif; fill: #697386; }
+      .body { font: 500 17px "Apple SD Gothic Neo", "Noto Sans KR", Arial, sans-serif; fill: #344054; }
+      .body-strong { font: 700 21px "Apple SD Gothic Neo", "Noto Sans KR", Arial, sans-serif; fill: #182230; }
+      .small { font: 500 14px "Apple SD Gothic Neo", "Noto Sans KR", Arial, sans-serif; fill: #697386; }
+      .mono { font: 700 15px "SFMono-Regular", Menlo, Consolas, monospace; fill: #344054; }
+      .green { fill: #ecfdf3; stroke: #a9e7c2; }
+      .green-text { fill: #027a48; }
+      .blue { fill: #eff8ff; stroke: #b2ddff; }
+      .blue-text { fill: #175cd3; }
+      .amber { fill: #fffaeb; stroke: #fedf89; }
+      .amber-text { fill: #b54708; }
+      .red { fill: #fef3f2; stroke: #fecaca; }
+      .red-text { fill: #b42318; }
+      .purple { fill: #f4f3ff; stroke: #d9d6fe; }
+      .purple-text { fill: #5925dc; }
+      .line { stroke: #e4e7ec; stroke-width: 1; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1600" height="920"/>
+  <rect x="52" y="44" width="1496" height="832" rx="8" fill="#fbfcff" stroke="#dfe5ef"/>
+
+  <text x="92" y="108" class="title">Sources &amp; Runs Audit</text>
+  <text x="92" y="142" class="subtitle">2026-W19 source status table · public source failures become explicit manual QA work</text>
+
+  <g transform="translate(92 188)">
+    <rect width="324" height="118" rx="8" class="panel"/>
+    <text x="24" y="34" class="label">TOTAL SOURCE RUNS</text>
+    <text x="24" y="78" class="body-strong">72 rows</text>
+    <text x="24" y="102" class="small">8 apps x 3 markets x 3 source types</text>
+
+    <rect x="350" width="324" height="118" rx="8" class="panel"/>
+    <text x="374" y="34" class="label">APP STORE</text>
+    <text x="374" y="78" class="body-strong">24 ok</text>
+    <text x="374" y="102" class="small">Store listings collected with evidence URLs</text>
+
+    <rect x="700" width="324" height="118" rx="8" class="panel"/>
+    <text x="724" y="34" class="label">SOCIAL PUBLIC PAGES</text>
+    <text x="724" y="78" class="body-strong">39 partial · 9 blocked</text>
+    <text x="724" y="102" class="small">Expected for non-login TikTok/Instagram checks</text>
+
+    <rect x="1050" width="324" height="118" rx="8" class="panel"/>
+    <text x="1074" y="34" class="label">MANUAL CHECK QUEUE</text>
+    <text x="1074" y="78" class="body-strong">48 rows</text>
+    <text x="1074" y="102" class="small">Review instructions are written into the workbook</text>
+  </g>
+
+  <g transform="translate(92 344)">
+    <rect width="630" height="368" rx="8" class="panel"/>
+    <text x="28" y="46" class="section">Status Distribution</text>
+
+    <text x="28" y="96" class="label">ok</text>
+    <rect x="128" y="76" width="412" height="34" rx="8" fill="#eef2f7"/>
+    <rect x="128" y="76" width="137" height="34" rx="8" fill="#12b76a"/>
+    <text x="560" y="99" class="mono green-text">24</text>
+
+    <text x="28" y="154" class="label">partial</text>
+    <rect x="128" y="134" width="412" height="34" rx="8" fill="#eef2f7"/>
+    <rect x="128" y="134" width="223" height="34" rx="8" fill="#fdb022"/>
+    <text x="560" y="157" class="mono amber-text">39</text>
+
+    <text x="28" y="212" class="label">blocked</text>
+    <rect x="128" y="192" width="412" height="34" rx="8" fill="#eef2f7"/>
+    <rect x="128" y="192" width="52" height="34" rx="8" fill="#f04438"/>
+    <text x="560" y="215" class="mono red-text">9</text>
+
+    <line x1="28" y1="260" x2="602" y2="260" class="line"/>
+    <text x="28" y="304" class="body-strong">Failure-aware design</text>
+    <text x="28" y="334" class="body">Rate limits and blocked public pages do not erase the run.</text>
+    <text x="28" y="362" class="body">They create source rows, error messages, and next actions.</text>
+  </g>
+
+  <g transform="translate(752 344)">
+    <rect width="704" height="368" rx="8" class="panel"/>
+    <text x="28" y="46" class="section">Source Runs Sample</text>
+    <text x="28" y="88" class="label">APP</text>
+    <text x="118" y="88" class="label">MARKET</text>
+    <text x="218" y="88" class="label">SOURCE</text>
+    <text x="430" y="88" class="label">STATUS</text>
+    <text x="550" y="88" class="label">NEXT ACTION</text>
+    <line x1="28" y1="106" x2="676" y2="106" class="line"/>
+
+    <text x="28" y="140" class="body">SNOW</text>
+    <text x="118" y="140" class="body">KR</text>
+    <text x="218" y="140" class="body">App Store Search</text>
+    <rect x="430" y="118" width="72" height="30" rx="8" class="green"/>
+    <text x="455" y="138" class="mono green-text">ok</text>
+    <text x="550" y="140" class="small">Review extracted listing changes</text>
+
+    <text x="28" y="186" class="body">SNOW</text>
+    <text x="118" y="186" class="body">US</text>
+    <text x="218" y="186" class="body">TikTok public search</text>
+    <rect x="430" y="164" width="88" height="30" rx="8" class="amber"/>
+    <text x="445" y="184" class="mono amber-text">partial</text>
+    <text x="550" y="186" class="small">Manual public review</text>
+
+    <text x="28" y="232" class="body">SODA</text>
+    <text x="118" y="232" class="body">KR</text>
+    <text x="218" y="232" class="body">Instagram public search</text>
+    <rect x="430" y="210" width="88" height="30" rx="8" class="red"/>
+    <text x="444" y="230" class="mono red-text">blocked</text>
+    <text x="550" y="232" class="small">Open public source manually</text>
+
+    <text x="28" y="278" class="body">EPIK</text>
+    <text x="118" y="278" class="body">JP</text>
+    <text x="218" y="278" class="body">TikTok public search</text>
+    <rect x="430" y="256" width="88" height="30" rx="8" class="amber"/>
+    <text x="445" y="276" class="mono amber-text">partial</text>
+    <text x="550" y="278" class="small">Low-confidence extract</text>
+
+    <text x="28" y="324" class="body">Remini</text>
+    <text x="118" y="324" class="body">US</text>
+    <text x="218" y="324" class="body">App Store Search</text>
+    <rect x="430" y="302" width="72" height="30" rx="8" class="green"/>
+    <text x="455" y="322" class="mono green-text">ok</text>
+    <text x="550" y="324" class="small">Review extracted listing changes</text>
+  </g>
+
+  <g transform="translate(92 748)">
+    <rect width="1364" height="78" rx="8" class="panel"/>
+    <text x="28" y="32" class="label">TRACEABILITY</text>
+    <text x="28" y="58" class="body">Every run records source name, app, market, status, timestamp, error message, manual-check flag, and next action.</text>
+    <rect x="1002" y="22" width="144" height="34" rx="8" class="blue"/>
+    <text x="1028" y="44" class="mono blue-text">source_url</text>
+    <rect x="1162" y="22" width="180" height="34" rx="8" class="purple"/>
+    <text x="1186" y="44" class="mono purple-text">manual_check</text>
+  </g>
+
+  <text x="92" y="858" class="small">Screenshot asset generated from live 2026-W19 Sheet QA values; private workbook URL, script ID, and OAuth data are not included.</text>
+</svg>

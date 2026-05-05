@@ -21,6 +21,14 @@ npm run verify
 - 차단, 부분 수집, 저신뢰 공개 소스는 숨기지 않고 수동 확인 항목으로 기록합니다.
 - Apps Script 메뉴에서 드라이런, 실주간 실행, 월요일 트리거 설치를 제공합니다.
 
+## 스크린샷
+
+아래 이미지는 비공개 QA 워크북의 `2026-W19` 실제 실행 값을 기반으로, Google Sheet URL/Script ID/OAuth 정보 같은 민감 식별자를 제외하고 렌더링한 포트폴리오용 캡처입니다.
+
+![Weekly Summary preview showing the top signal, score, workbook tabs, and top changes](docs/assets/weekly-summary-preview.png)
+
+![Sources and Runs audit preview showing ok, partial, blocked, and manual-check rows](docs/assets/source-runs-preview.png)
+
 ## 기술 스택
 
 - TypeScript
@@ -126,10 +134,6 @@ TikTok과 Instagram 체크는 공개 비로그인 페이지 기준으로만 수�
 - 실제 워크북 QA: 비공개 bound Google Sheet에서 `Growth Tracker` 메뉴로 검증했습니다. 실행 결과 `2026-W19` 기준 `Weekly Summary`, `Growth Signals`, `Store Keywords`, `Sources & Runs`에 row가 기록되었습니다.
 
 실제 QA 워크북은 계정에 귀속된 Google Sheet이므로 공개 데모 링크로 제공하지 않습니다.
-
-## 스크린샷
-
-아직 스크린샷은 포함되어 있지 않습니다. 주요 UI는 Apps Script 배포 후 대상 Google Sheets 워크북입니다.
 
 ## 라이선스
 
