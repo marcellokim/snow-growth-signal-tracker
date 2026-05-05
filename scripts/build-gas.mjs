@@ -1,7 +1,8 @@
-import { mkdir, copyFile } from "node:fs/promises";
+import { mkdir, copyFile, readFile } from "node:fs/promises";
 import { build } from "esbuild";
 
 await mkdir("build", { recursive: true });
+await verifyAppsScriptManifest();
 
 const appsScriptEntrypointFooter = `
 function onOpen() {
@@ -41,3 +42,10 @@ await build({
 });
 
 await copyFile("appsscript.json", "build/appsscript.json");
+
+async function verifyAppsScriptManifest() {
+  const manifest = JSON.parse(await readFile("appsscript.json", "utf8"));
+  if (manifest.executionApi?.access !== "MYSELF") {
+    throw new Error("appsscript.json executionApi.access must stay MYSELF for private workbook QA.");
+  }
+}

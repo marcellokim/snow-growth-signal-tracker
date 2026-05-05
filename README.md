@@ -1,11 +1,11 @@
 # SNOW Growth Signal Tracker
 
-SNOW Growth Signal Tracker is a TypeScript and Google Apps Script project for monitoring weekly growth signals across SNOW-family camera apps and comparable photo-editing competitors in Google Sheets.
+SNOW Growth Signal Tracker is a TypeScript and Google Apps Script workbook automation for monitoring weekly growth signals across SNOW-family camera apps and comparable photo-editing competitors in Google Sheets.
 
 It tracks SNOW, SODA, Foodie, EPIK, B612, BeautyPlus, Meitu, and Remini across KR, US, and JP. The workbook captures App Store positioning, AI-related feature signals, public TikTok/Instagram search checks, source status, manual review needs, and a one-page weekly summary.
 
 ```bash
-npm install
+npm ci
 npm run verify
 ```
 
@@ -50,14 +50,14 @@ docs/apps-script-setup.md
 
 Prerequisites:
 
-- Node.js 20 or newer is recommended.
+- Node.js 22 is recommended, matching CI.
 - npm, using the committed `package-lock.json`.
 - A Google account with access to the target Google Sheet is required only for live Apps Script deployment.
 
 Install and verify:
 
 ```bash
-npm install
+npm ci
 npm run verify
 ```
 
@@ -79,7 +79,10 @@ Live deployment uses Google authentication handled by `clasp`:
 - `.clasp.json` binds this repo to a specific Apps Script project and is intentionally ignored.
 - `npx clasp login` stores Google auth outside this repo.
 - The Apps Script OAuth scopes are declared in [appsscript.json](appsscript.json).
+- Apps Script Execution API access is limited to the deploying user; the Sheet menu workflow remains the supported live execution path.
 - Do not commit Google credentials, local workbook bindings, copied cookies, or private social account access.
+
+See [.env.example](.env.example) for the current no-secret local environment contract.
 
 ## Google Sheets Deployment
 
@@ -94,9 +97,11 @@ Short version:
 ```bash
 npm run build
 npx clasp login
-npx clasp clone <SCRIPT_ID> --rootDir build
+npx clasp create --type sheets --title "SNOW Growth Signal Tracker" --rootDir build
 npx clasp push
 ```
+
+If a bound Apps Script project already exists, use `npx clasp clone <SCRIPT_ID> --rootDir build` instead of `npx clasp create`.
 
 After pushing, reload the Google Sheet and use the `Growth Tracker` menu:
 
@@ -104,13 +109,23 @@ After pushing, reload the Google Sheet and use the `Growth Tracker` menu:
 - `Run Weekly Tracker`
 - `Install Weekly Trigger`
 
-Live Google authorization, menu rendering, `clasp push`, and trigger execution must be verified in the target Google account. Local verification does not prove those external account steps.
+Live Google authorization, menu rendering, `clasp push`, and trigger execution must be verified in the target Google account. Local verification does not prove those external account steps. Current non-secret QA evidence is tracked in [docs/qa-evidence.md](docs/qa-evidence.md).
+
+`clasp run` is not the primary QA path for this project. It can fail when the local Google OAuth client lacks Apps Script Execution API approval for sensitive scopes. The Sheet menu path is the supported live execution path.
 
 ## Source Policy
 
 TikTok and Instagram checks are public, non-login checks only. The tracker should not use personal login cookies, authenticated scraping sessions, or private-account access.
 
 Blocked, rate-limited, or low-confidence sources become source-status rows and manual-check items instead of causing the entire weekly run to fail.
+
+## Current Verification
+
+- Local verification: `npm run verify`.
+- CI verification: GitHub Actions runs `npm ci` and `npm run verify` on pushes to `main` and pull requests.
+- Live workbook QA: verified against a private bound Google Sheet with the `Growth Tracker` menu. The run populated `Weekly Summary`, `Growth Signals`, `Store Keywords`, and `Sources & Runs` for `2026-W19`.
+
+The live workbook is not published as a demo link because it is an account-bound Google Sheet, not a public hosted product.
 
 ## Screenshots
 
