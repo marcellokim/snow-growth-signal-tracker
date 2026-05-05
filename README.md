@@ -137,4 +137,6 @@ TikTok과 Instagram 체크는 공개 비로그인 페이지 기준으로만 수�
 
 ## 라이선스
 
-아직 오픈소스 라이선스가 선언되어 있지 않습니다. 프로젝트 소유자 외 재사용을 권장하려면 먼저 라이선스를 추가해야 합니다.
+이 프로젝트의 소스코드와 문서는 MIT License로 배포됩니다. 자세한 내용은 [LICENSE](LICENSE)를 참고하세요.
+
+SNOW, SODA, Foodie, EPIK, B612, BeautyPlus, Meitu, Remini 및 관련 플랫폼/앱 이름과 상표는 각 소유자에게 있습니다. 자세한 고지는 [NOTICE.md](NOTICE.md)를 참고하세요.
